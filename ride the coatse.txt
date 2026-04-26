@@ -1,0 +1,95 @@
+getgenv().script_name = "Sqilss Hub"
+getgenv().script_version = "1.0"
+
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/panduh16/juju/main/ui.lua"))()
+local group = lib["menu"].create_group("Custom Wins & Coins By Sqilss")
+group:create_tab("Main")
+
+local section = group:create_section("Main", "Controls", 1, 1, 0)
+
+-- Wins Input
+section:create_element({["name"] = "Wins Amount"}, {
+    ["textbox"] = {["flag"] = "WinsAmount", ["default"] = "100000000000"}
+})
+
+-- Coins Input
+section:create_element({["name"] = "Coins Amount"}, {
+    ["textbox"] = {["flag"] = "CoinsAmount", ["default"] = "100000000000"}
+})
+
+-- Give Wins Button
+local btn_give_wins = section:create_element({["name"] = "Give Wins"}, {
+    ["button"] = {["confirmation"] = false}
+})
+
+lib["create_connection"](btn_give_wins["on_clicked"], function()
+    local text = lib["flags"]["WinsAmount"]
+    if type(text) == "table" then text = text[1] end
+    local num = tonumber(text) or tonumber(loadstring("return " .. tostring(text))()) or 100000000000
+    num = math.max(1, num)
+
+    game:GetService("ReplicatedStorage")
+        :WaitForChild("Remote")
+        :WaitForChild("Event")
+        :WaitForChild("Race")
+        :WaitForChild("AddCoinsOrWins")
+        :FireServer(num, "Wins")
+end)
+
+-- Give Coins Button
+local btn_give_coins = section:create_element({["name"] = "Give Coins"}, {
+    ["button"] = {["confirmation"] = false}
+})
+
+lib["create_connection"](btn_give_coins["on_clicked"], function()
+    local text = lib["flags"]["CoinsAmount"]
+    if type(text) == "table" then text = text[1] end
+    local num = tonumber(text) or tonumber(loadstring("return " .. tostring(text))()) or 100000000000
+    num = math.max(1, num)
+
+    game:GetService("ReplicatedStorage")
+        :WaitForChild("Remote")
+        :WaitForChild("Event")
+        :WaitForChild("Race")
+        :WaitForChild("AddCoinsOrWins")
+        :FireServer(num, "Coins")
+end)
+
+-- Give Both Button
+local btn_give_both = section:create_element({["name"] = "Give Both Wins + Coins"}, {
+    ["button"] = {["confirmation"] = false}
+})
+
+lib["create_connection"](btn_give_both["on_clicked"], function()
+    local textWins = lib["flags"]["WinsAmount"]
+    if type(textWins) == "table" then textWins = textWins[1] end
+    local numWins = tonumber(textWins) or tonumber(loadstring("return " .. tostring(textWins))()) or 100000000000
+    numWins = math.max(1, numWins)
+
+    local textCoins = lib["flags"]["CoinsAmount"]
+    if type(textCoins) == "table" then textCoins = textCoins[1] end
+    local numCoins = tonumber(textCoins) or tonumber(loadstring("return " .. tostring(textCoins))()) or 100000000000
+    numCoins = math.max(1, numCoins)
+
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(numWins, "Wins")
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(numCoins, "Coins")
+end)
+
+-- Optional Presets
+local btn_preset_100b = section:create_element({["name"] = "Preset: Give 100 Billion (100B)"}, {
+    ["button"] = {["confirmation"] = false}
+})
+
+lib["create_connection"](btn_preset_100b["on_clicked"], function()
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(100000000000, "Wins")
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(100000000000, "Coins")
+end)
+
+local btn_preset_1t = section:create_element({["name"] = "Preset: Give 1 Trillion (1T)"}, {
+    ["button"] = {["confirmation"] = false}
+})
+
+lib["create_connection"](btn_preset_1t["on_clicked"], function()
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(1000000000000, "Wins")
+    game:GetService("ReplicatedStorage").Remote.Event.Race.AddCoinsOrWins:FireServer(1000000000000, "Coins")
+end)
